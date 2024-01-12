@@ -79,6 +79,13 @@ const allSongs = [
 ];
 
 const audio = new Audio();
+// This object that will contain the songs, the current song playing, and the time of the current song.
+
+let userData = {
+  songs: [...allSongs],
+  currentSong: null, // To handle the current song's information and track its playback time,
+  songCurrentTime: 0,
+};
 
 // This provides play functionality to the songs.
 const playSong = (id) => {
@@ -93,24 +100,63 @@ const playSong = (id) => {
   // You need to update the current song being played as well as the appearance of the playButton element.
   userData.currentSong = song;
   playButton.classList.add("playing");
+  highlightCurrentSong();
+  setPlayerDisplay();
   audio.play();
 };
 
-const pauseSong =()=>{
-    userData.songCurrentTime = audio.currentTime;  // This is to keep track of the current time of the song.
-    playButton.classList.remove("playing");
-    audio.pause();
+const pauseSong = () => {
+  userData.songCurrentTime = audio.currentTime; // This is to keep track of the current time of the song.
+  playButton.classList.remove("playing");
+  audio.pause();
 
-    // Use classList and remove() method to remove the .playing class from the playButton, since the song will be paused at this point.
-    // To finally pause the song, use the pause() method on the audio variable. pause() is a method of the Web Audio API for pausing music files.
+  // Use classList and remove() method to remove the .playing class from the playButton, since the song will be paused at this point.
+  // To finally pause the song, use the pause() method on the audio variable. pause() is a method of the Web Audio API for pausing music files.
+};
 
+const playNextSong = () => {
+  if (userData?.currentSong === null) {
+    playSong(userData?.songs[0].id);
+  } else {
+    const currentSongIndex = getCurrentSongIndex();
+    const nextSong = userData?.songs[currentSongIndex + 1];
+
+    playSong(nextSong.id);
+  }
+};
+
+
+const playPreviousSong = () => {
+  if (userData?.currentSong === null) {
+    return;
+  } else {
+    const currentSongIndex = getCurrentSongIndex();
+    const previousSong = userData?.songs[currentSongIndex - 1];
+    playSong(previousSong.id);
+  }
+};
+
+const setPlayerDisplay = () => {
+  const playingSong = document.getElementById("player-song-title");
+  const songArtist = document.getElementById("player-song-artist");
+  const currentTitle = userData?.currentSong?.title;
+  const currentArtist = userData?.currentSong?.artist;
+  playingSong.textContent = currentTitle? currentTitle : "";
+  songArtist.textContent = currentArtist? currentArtist: "";
 }
-// This object that will contain the songs, the current song playing, and the time of the current song.
 
-let userData = {
-  songs: [...allSongs],
-  currentSong: null, // To handle the current song's information and track its playback time,
-  songCurrentTime: 0,
+
+const highlightCurrentSong = () => {
+  const playlistSongElements = document.querySelectorAll(".playlist-song");
+  const songToHighlight = document.getElementById(
+    `song-${userData?.currentSong?.id}`
+  );
+  playlistSongElements.forEach((songEl) => {
+    songEl.removeAttribute("aria-current");
+  });
+  if (songToHighlight) {
+    songToHighlight.setAttribute("aria-current", "true");
+  }
 };
 
 //   This is to display the songs in the UI. The map is used to build the HTML for each song in the array.
@@ -121,7 +167,8 @@ const renderSongs = (array) => {
       return `
     <li id="song-${song.id}" class="playlist-song"> 
     
-    <button class="playlist-song-info onclick="playSong(${song.id})" ">
+    <button class="playlist-song-info" onclick="playSong(${song.id})">
+
     <span class="playlist-song-title">${song.title}</span>
     <span class="playlist-song-artist">${song.artist}</span>
     <span class="playlist-song-duration">${song.duration}</span>
@@ -139,7 +186,12 @@ const renderSongs = (array) => {
   playlistSongs.innerHTML = songsHTML;
 };
 
+// This function will set the aria-label attribute to the current song, or to the first song in the playlist. And if the playlist is empty, it sets the aria-label to "Play".
+const setPlayButtonAccessibleText = () => {}
+
 // Before you start working on playing the next and previous song, you need to get the index of each song in the songs property of userData.
+
+const getCurrentSongIndex = () => userData?.songs.indexOf(userData.currentSong);
 
 playButton.addEventListener("click", () => {
   if (userData?.currentSong === null) {
@@ -149,5 +201,7 @@ playButton.addEventListener("click", () => {
   }
 });
 pauseButton.addEventListener("click", pauseSong);
+nextButton.addEventListener("click", playNextSong);
+previousButton.addEventListener("click", playPreviousSong);
 
 renderSongs(userData?.songs);
