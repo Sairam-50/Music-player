@@ -102,6 +102,7 @@ const playSong = (id) => {
   playButton.classList.add("playing");
   highlightCurrentSong();
   setPlayerDisplay();
+  setPlayButtonAccessibleText();
   audio.play();
 };
 
@@ -125,7 +126,6 @@ const playNextSong = () => {
   }
 };
 
-
 const playPreviousSong = () => {
   if (userData?.currentSong === null) {
     return;
@@ -136,15 +136,53 @@ const playPreviousSong = () => {
   }
 };
 
+// This function is responsible for shuffling the songs in the playlist and performing necessary state management updates after the shuffling.
+
+const shuffle = () => {
+  userData?.songs.sort(() => Math.random() - 0.5);
+  userData.currentSong = null;
+  userData.songCurrentTime = 0;
+  // You should also re-render the songs, pause the currently playing song, set the player display, and set the play button accessible text again.
+  renderSongs(userData?.songs);
+  pauseSong();
+  setPlayerDisplay();
+  setPlayButtonAccessibleText();
+};
+
+// It's time to implement a delete functionality for the playlist. This would manage the removal of a song from the playlist, handle other related actions when a song is deleted, and create a Reset Playlist button.
+
+const deleteSong = (id) => {
+  if (userData?.currentSong?.id === id) {
+    userData.currentSong = null;
+    userData.songCurrentTime = 0;
+    pauseSong();
+    set();
+  }
+
+  userData.songs = userData?.songs.filter((song) => song.id !== id);
+
+  renderSongs(userData?.songs);
+  highlightCurrentSong();
+  setPlayButtonAccessibleText();
+  // Next, you need to check if the playlist is empty. If it is, you should reset the userData object to its original state.
+  if (userData?.songs.length === 0) {
+    const resetButton = document.createElement("button");
+    const resetText = document.createTextNode("Reset Playlist");
+    resetButton.id = "reset";
+    resetButton.ariaLabel = "Reset playlist";
+    resetButton.appendChild(resetText);
+    playlistSongs.appendChild(resetButton);
+  }
+};
+
 const setPlayerDisplay = () => {
   const playingSong = document.getElementById("player-song-title");
   const songArtist = document.getElementById("player-song-artist");
   const currentTitle = userData?.currentSong?.title;
   const currentArtist = userData?.currentSong?.artist;
-  playingSong.textContent = currentTitle? currentTitle : "";
-  songArtist.textContent = currentArtist? currentArtist: "";
-}
-
+  playingSong.textContent = currentTitle ? currentTitle : "";
+  songArtist.textContent = currentArtist ? currentArtist : "";
+};
 
 const highlightCurrentSong = () => {
   const playlistSongElements = document.querySelectorAll(".playlist-song");
@@ -167,14 +205,14 @@ const renderSongs = (array) => {
       return `
     <li id="song-${song.id}" class="playlist-song"> 
     
-    <button class="playlist-song-info" onclick="playSong(${song.id})">
+    <button onclick="playSong(${song.id})" class="playlist-song-info" >   
 
     <span class="playlist-song-title">${song.title}</span>
     <span class="playlist-song-artist">${song.artist}</span>
     <span class="playlist-song-duration">${song.duration}</span>
 </button>
 
-<button class="playlist-song-delete" aria-label="Delete ${song.title}">  
+<button class="playlist-song-delete" aria-label="Delete ${song.title}" onclick="deleteSong(${song.id})">  
 
 <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="8" fill="#4d4d62"/>
 <path fill-rule="evenodd" clip-rule="evenodd" d="M5.32587 5.18571C5.7107 4.90301 6.28333 4.94814 6.60485 5.28651L8 6.75478L9.39515 5.28651C9.71667 4.94814 10.2893 4.90301 10.6741 5.18571C11.059 5.4684 11.1103 5.97188 10.7888 6.31026L9.1832 7.99999L10.7888 9.68974C11.1103 10.0281 11.059 10.5316 10.6741 10.8143C10.2893 11.097 9.71667 11.0519 9.39515 10.7135L8 9.24521L6.60485 10.7135C6.28333 11.0519 5.7107 11.097 5.32587 10.8143C4.94102 10.5316 4.88969 10.0281 5.21121 9.68974L6.8168 7.99999L5.21122 6.31026C4.8897 5.97188 4.94102 5.4684 5.32587 5.18571Z" fill="white"/></svg>
@@ -187,7 +225,13 @@ const renderSongs = (array) => {
 };
 
 // This function will set the aria-label attribute to the current song, or to the first song in the playlist. And if the playlist is empty, it sets the aria-label to "Play".
-const setPlayButtonAccessibleText = () => {}
+const setPlayButtonAccessibleText = () => {
+  const song = userData?.currentSong || userData?.songs[0];
+  playButton.setAttribute(
+    "aria-label",
+    song?.title ? `Play ${song.title}` : "Play"
+  );
+};
 
 // Before you start working on playing the next and previous song, you need to get the index of each song in the songs property of userData.
 
@@ -203,5 +247,28 @@ playButton.addEventListener("click", () => {
 pauseButton.addEventListener("click", pauseSong);
 nextButton.addEventListener("click", playNextSong);
 previousButton.addEventListener("click", playPreviousSong);
+shuffleButton.addEventListener("click", shuffle);
+audio.addEventListener("ended", () => {
+  const currentSongIndex = getCurrentSongIndex();
+  const nextSongExists = userData?.songs[currentSongIndex + 1] !== undefined; // this results in nextSongExists being true if the next song exists, and false if it doesn't.
+  if (nextSongExists) {
+    playNextSong();
+  } else {
+    userData.currentSong = null;
+    userData.songCurrentTime = 0;
+    pauseSong();
+    setPlayerDisplay();
+    highlightCurrentSong();
+    setPlayButtonAccessibleText();
+  }
+});
+
+resetButton.addEventListener("click", () => {
+  userData.songs = [...allSongs];
+  // Finally, you should render the songs again, update the play button's accessible text, and remove the reset button from the playlist. You also need to remove the resetButton from the DOM.
+  renderSongs(userData?.songs);
+  setPlayButtonAccessibleText();
+  resetButton.remove();
+});
 
 renderSongs(userData?.songs);
